@@ -14,16 +14,18 @@
 window.OneSignalDeferred = window.OneSignalDeferred || [];
 
 OneSignalDeferred.push(async function(OneSignal) {
+
   await OneSignal.init({
     appId: "fbee04c7-49b9-4888-9572-4197486366a3",
-
-    serviceWorkerPath: "OneSignalSDKWorker.js",
-    serviceWorkerUpdaterPath: "OneSignalSDKWorker.js",
 
     notifyButton: {
       enable: false
     }
   });
+
+  // 🔔 Force l'affichage de la demande de permission
+  OneSignal.showSlidedownPrompt();
+
 });
 </script>
 
