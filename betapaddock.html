@@ -3,26 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <title>REPRO PADDOCKS</title>
+<style>
+body{font-family:monospace;background:#111;color:#0f0;padding:15px}
+#log{white-space:pre-line;font-size:14px}
+</style>
 </head>
 <body>
 
-<h2>Repro console paddocks</h2>
-<p>Ouvre la console (F12) pour voir les logs.</p>
+<h3>Console Live</h3>
+<div id="log"></div>
 
 <script>
 
 const SHEET_URL="https://opensheet.elk.sh/1-VbRioKfM6JHU-Oep0pa6H3S0VVuvYLyUMXTdSdRbzI/statuts";
-const REFRESH=10000; // 10 secondes pour test
+const REFRESH=10000;
 
 let lastHash=null;
 let lastStatuts={};
+
+function log(msg){
+  const el=document.getElementById("log");
+  el.innerHTML+="\n"+msg;
+  el.scrollTop=el.scrollHeight;
+}
 
 function loadData(){
 
   const url=SHEET_URL+"?_="+Date.now();
 
-  console.log("------");
-  console.log("Fetch à :", new Date().toLocaleTimeString());
+  log("------");
+  log("Fetch : "+new Date().toLocaleTimeString());
 
   fetch(url,{cache:"no-store"})
   .then(r=>r.json())
@@ -31,10 +41,10 @@ function loadData(){
     const currentHash=JSON.stringify(data);
 
     if(currentHash!==lastHash){
-      console.log("🔄 JSON CHANGÉ");
+      log("🔄 JSON CHANGÉ");
       lastHash=currentHash;
     }else{
-      console.log("⏸ JSON IDENTIQUE");
+      log("⏸ JSON IDENTIQUE");
     }
 
     data.forEach(row=>{
@@ -44,22 +54,15 @@ function loadData(){
       const statut=row.statut_auto;
 
       if(lastStatuts[espace] && lastStatuts[espace]!==statut){
-        console.log(
-          "⚡",espace,
-          "est passé de",
-          lastStatuts[espace],
-          "à",
-          statut
-        );
+        log("⚡ "+espace+" : "+lastStatuts[espace]+" → "+statut);
       }
 
       lastStatuts[espace]=statut;
-
     });
 
   })
   .catch(err=>{
-    console.error("Erreur fetch :",err);
+    log("Erreur : "+err);
   });
 
 }
