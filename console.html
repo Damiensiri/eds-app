@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Supervision</title>
+<style>
+body{
+  margin:0;
+  padding:20px;
+  font-family:monospace;
+  background:#0e0e0e;
+  color:#00ff88;
+}
+
+h1{margin-top:0}
+
+.card{
+  border:1px solid #00ff88;
+  padding:12px;
+  margin-bottom:15px;
+}
+
+.bad{
+  border-color:red;
+  color:red;
+}
+
+.ok{
+  border-color:#00ff88;
+}
+
+.space{
+  padding:8px;
+  margin:6px 0;
+  border-left:4px solid #00ff88;
+}
+
+.log{
+  max-height:200px;
+  overflow-y:auto;
+  background:#111;
+  padding:10px;
+  font-size:13px;
+}
+</style>
+</head>
+<body>
+
+<h1>🧠 Dashboard Supervision</h1>
+
+<div id="health" class="card ok"></div>
+<div id="spaces"></div>
+
+<div class="card">
+  <strong>Historique des bascules</strong>
+  <div id="history" class="log"></div>
+</div>
+
+<script>
+
+const SHEET_URL="https://opensheet.elk.sh/1-VbRioKfM6JHU-Oep0pa6H3S0VVuvYLyUMXTdSdRbzI/statuts";
+const REFRESH=30000;
+const FREEZE_LIMIT=180; // 3 minutes
+
+let lastHash=null;
+let lastChangeTime=null;
+let lastStatuses={};
+
+function formatTime(d){
+  return d.toLocaleTimeString();
+}
+
+function logHistory(msg){
+  const el=document.getElementById("history");
+  el.innerHTML+="<div>"+msg+"</div>";
+  el.scrollTop=el.scrollHeight;
+}
+
+function updateHealth(now){
+
+  const health=document.getElementById("health");
+
+  let secondsSinceChange = lastChangeTime
+    ? Math.floor((now-lastChangeTime)/1000)
+    : 0;
+
+  let statusClass="ok";
+  let statusText="🟢 Système stable";
+
+  if(secondsSinceChange > FREEZE_LIMIT){
+    statusClass="bad";
+    statusText="🔴 Aucune mutation détectée depuis "+secondsSinceChange+"s";
+  }
+
+  health.className="card "+statusClass;
+
+  health.innerHTML=`
+    ${statusText}<br>
+    Dernier fetch : ${formatTime(now)}<br>
+    Dernier changement JSON : ${lastChangeTime ? formatTime(lastChangeTime) : "Aucun"}<br>
+    Temps sans changement : ${secondsSinceChange}s
+  `;
+}
+
+function loadData(){
+
+  const now=new Date();
+
+  fetch(SHEET_URL)
+  .then(r=>r.json())
+  .then(data=>{
+
+    const currentHash=JSON.stringify(data);
+
+    if(currentHash!==lastHash){
+      lastHash=currentHash;
+      lastChangeTime=now;
+    }
+
+    updateHealth(now);
+
+    let html="";
+    data.forEach(e=>{
+
+      const oldStatus=lastStatuses[e.espace];
+      const newStatus=e.statut_auto;
+
+      if(oldStatus && oldStatus!==newStatus){
+        logHistory(
+          "⚡ "+formatTime(now)+" → "+e.espace+
+          " : "+oldStatus+" → "+newStatus
+        );
+      }
+
+      lastStatuses[e.espace]=newStatus;
+
+      html+=`
+        <div class="space">
+          <strong>${e.espace}</strong> → ${newStatus}
+        </div>
+      `;
+    });
+
+    document.getElementById("spaces").innerHTML=html;
+
+  })
+  .catch(err=>{
+    document.getElementById("health").className="card bad";
+    document.getElementById("health").innerHTML=
+      "❌ Erreur réseau : "+err;
+  });
+
+}
+
+loadData();
+setInterval(loadData,REFRESH);
+
+</script>
+
+</body>
+</html>
