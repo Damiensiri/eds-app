@@ -4,19 +4,27 @@
 <meta charset="UTF-8">
 <title>REPRO PADDOCKS</title>
 <style>
-body{font-family:monospace;background:#111;color:#0f0;padding:15px}
-#log{white-space:pre-line;font-size:14px}
+body{
+  font-family:monospace;
+  background:#111;
+  color:#00ff66;
+  padding:15px;
+}
+#log{
+  white-space:pre-line;
+  font-size:14px;
+}
 </style>
 </head>
 <body>
 
-<h3>Console Live</h3>
+<h3>Console Live Paddocks</h3>
 <div id="log"></div>
 
 <script>
 
 const SHEET_URL="https://opensheet.elk.sh/1-VbRioKfM6JHU-Oep0pa6H3S0VVuvYLyUMXTdSdRbzI/statuts";
-const REFRESH=10000;
+const REFRESH=10000; // 10 sec pour test
 
 let lastHash=null;
 let lastStatuts={};
@@ -35,8 +43,22 @@ function loadData(){
   log("Fetch : "+new Date().toLocaleTimeString());
 
   fetch(url,{cache:"no-store"})
-  .then(r=>r.json())
-  .then(data=>{
+  .then(r=>r.text())
+  .then(text=>{
+
+    log("RAW RESPONSE ↓");
+
+    // on affiche seulement les 500 premiers caractères pour pas exploser l'écran
+    log(text.substring(0,500));
+
+    let data;
+
+    try{
+      data=JSON.parse(text);
+    }catch(e){
+      log("❌ JSON invalide");
+      return;
+    }
 
     const currentHash=JSON.stringify(data);
 
@@ -47,22 +69,30 @@ function loadData(){
       log("⏸ JSON IDENTIQUE");
     }
 
-    data.forEach(row=>{
-      if(!row.espace || !row.statut_auto) return;
+    if(Array.isArray(data)){
 
-      const espace=row.espace.trim();
-      const statut=row.statut_auto;
+      data.forEach(row=>{
 
-      if(lastStatuts[espace] && lastStatuts[espace]!==statut){
-        log("⚡ "+espace+" : "+lastStatuts[espace]+" → "+statut);
-      }
+        if(!row.espace || !row.statut_auto) return;
 
-      lastStatuts[espace]=statut;
-    });
+        const espace=row.espace.trim();
+        const statut=row.statut_auto;
+
+        if(lastStatuts[espace] && lastStatuts[espace]!==statut){
+          log("⚡ "+espace+" : "+lastStatuts[espace]+" → "+statut);
+        }
+
+        lastStatuts[espace]=statut;
+
+      });
+
+    }else{
+      log("⚠ Réponse non tableau détectée");
+    }
 
   })
   .catch(err=>{
-    log("Erreur : "+err);
+    log("❌ Erreur fetch : "+err);
   });
 
 }
