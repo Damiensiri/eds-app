@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>REPRO PADDOCKS</title>
+</head>
+<body>
+
+<h2>Repro console paddocks</h2>
+<p>Ouvre la console (F12) pour voir les logs.</p>
+
+<script>
+
+const SHEET_URL="https://opensheet.elk.sh/1-VbRioKfM6JHU-Oep0pa6H3S0VVuvYLyUMXTdSdRbzI/statuts";
+const REFRESH=10000; // 10 secondes pour test
+
+let lastHash=null;
+let lastStatuts={};
+
+function loadData(){
+
+  const url=SHEET_URL+"?_="+Date.now();
+
+  console.log("------");
+  console.log("Fetch à :", new Date().toLocaleTimeString());
+
+  fetch(url,{cache:"no-store"})
+  .then(r=>r.json())
+  .then(data=>{
+
+    const currentHash=JSON.stringify(data);
+
+    if(currentHash!==lastHash){
+      console.log("🔄 JSON CHANGÉ");
+      lastHash=currentHash;
+    }else{
+      console.log("⏸ JSON IDENTIQUE");
+    }
+
+    data.forEach(row=>{
+      if(!row.espace || !row.statut_auto) return;
+
+      const espace=row.espace.trim();
+      const statut=row.statut_auto;
+
+      if(lastStatuts[espace] && lastStatuts[espace]!==statut){
+        console.log(
+          "⚡",espace,
+          "est passé de",
+          lastStatuts[espace],
+          "à",
+          statut
+        );
+      }
+
+      lastStatuts[espace]=statut;
+
+    });
+
+  })
+  .catch(err=>{
+    console.error("Erreur fetch :",err);
+  });
+
+}
+
+loadData();
+setInterval(loadData,REFRESH);
+
+</script>
+
+</body>
+</html>
